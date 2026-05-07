@@ -53,7 +53,8 @@
     "productName": "ProCurve Manager",
     "files": [
       "dist/**/*",
-      "node_modules/**/*"
+      "node_modules/**/*",
+      "assets/**/*"
     ],
     "directories": {
       "buildResources": "assets"

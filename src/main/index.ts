@@ -25,6 +25,10 @@ function createWindow() {
     ? 'http://localhost:5173'
     : `file://${path.join(__dirname, '../renderer/index.html')}`;
 
+  const iconPath = isDev 
+    ? path.join(__dirname, '../../assets/icon.png')
+    : path.join(__dirname, '../assets/icon.png');
+
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -37,6 +41,7 @@ function createWindow() {
     },
     titleBarStyle: 'hidden',
     backgroundColor: '#1f2228',
+    icon: iconPath,
   });
 
   mainWindow.loadURL(indexPath);

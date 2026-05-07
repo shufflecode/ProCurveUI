@@ -37,6 +37,7 @@
 - **🏷️ VLAN Orchestration:** Simplify complex VLAN tasks. Create, rename, and manage port memberships (tagged/untagged) without memorizing CLI syntax.
 - **⌨️ Embedded Terminal:** Need the raw CLI? Use the integrated SSH terminal with command history support.
 - **📑 Command Audit Log:** Every change is tracked. View a historical log of every command sent to the switch and its resulting output.
+- **🎨 Custom Branding:** Professional application icon and matching "Geist Mono" aesthetic.
 
 ---
 
