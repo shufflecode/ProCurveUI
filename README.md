@@ -68,13 +68,21 @@
    ```
 
 4. **Build for your platform**
+
+   Follow the commands below to generate a production executable for your operating system. The built files will be located in the `dist/` directory.
+
    ```bash
-   # Build for macOS
-   npm run build:mac
+   # Build for macOS (.dmg, .zip)
+   npm run package:mac
    
-   # Build for Windows
-   npm run build:win
+   # Build for Windows (.exe, portable)
+   npm run package:win
+
+   # Build for Linux (.AppImage, .deb)
+   npm run package:linux
    ```
+
+   *Note: It is recommended to build on the target operating system to ensure native dependencies are compiled correctly.*
 
 ---
 
