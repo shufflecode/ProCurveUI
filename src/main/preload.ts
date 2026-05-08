@@ -53,5 +53,17 @@ contextBridge.exposeInMainWorld('ipc', {
   removeSshDisconnectedListener: () => ipcRenderer.removeAllListeners('ssh:disconnected'),
   removeSshErrorListener: () => ipcRenderer.removeAllListeners('ssh:error'),
 
+  // Window controls
+  minimize: () => ipcRenderer.invoke('window:minimize'),
+  maximize: () => ipcRenderer.invoke('window:maximize'),
+  unmaximize: () => ipcRenderer.invoke('window:unmaximize'),
+  isWindowMaximized: () => ipcRenderer.invoke('window:isMaximized'),
+  closeWindow: () => ipcRenderer.invoke('window:close'),
+  onWindowMaximized: (cb: () => void) => ipcRenderer.on('window:maximized', () => cb()),
+  onWindowUnmaximized: (cb: () => void) => ipcRenderer.on('window:unmaximized', () => cb()),
+
+  // Window frameless state
+  isWindowFrameless: () => ipcRenderer.invoke('window:isFrameless'),
+
   platform: process.platform,
 });

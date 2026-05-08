@@ -1,4 +1,23 @@
 import { app, BrowserWindow, ipcMain, Menu } from 'electron';
+
+// Prevent renderer DevTools from opening
+try { app.commandLine.appendSwitch('disable-dev-tools'); } catch (e) { /* ignore */ }
+
+// Destroy any devtools webContents if they are created
+try {
+  app.on('web-contents-created', (_event, contents) => {
+    try {
+      contents.on('did-frame-finish-load', () => {
+        try {
+          const url = contents.getURL?.() ?? '';
+          if (typeof url === 'string' && url.startsWith('devtools://')) {
+            try { contents.destroy(); } catch (e) { /* ignore */ }
+          }
+        } catch (e) { /* ignore */ }
+      });
+    } catch (e) { /* ignore */ }
+  });
+} catch (e) { /* ignore */ }
 import path from 'path';
 import { fileURLToPath } from 'url';
 import isDev from 'electron-is-dev';
@@ -29,6 +48,9 @@ function createWindow() {
     ? path.join(__dirname, '../../assets/icon.png')
     : path.join(__dirname, '../assets/icon.png');
 
+  // Use native frame/titlebar on all platforms to keep native controls visible
+  const useFrameless = false; // set to true to enable custom titlebar
+
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -38,17 +60,37 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       preload: preloadPath,
+      devTools: false,
     },
-    titleBarStyle: process.platform === 'darwin' ? 'hidden' : 'default',
-    frame: process.platform === 'darwin' ? false : true,
+    titleBarStyle: 'default',
+    frame: !useFrameless,
     backgroundColor: '#1f2228',
     icon: iconPath,
   });
 
+  // expose whether we're using a frameless/custom titlebar
+  (mainWindow as any).isFrameless = useFrameless;
+
   mainWindow.loadURL(indexPath);
 
   mainWindow.on('closed', () => { mainWindow = null; });
+
+  // Close devtools after the page finishes loading and if they open later
+  try {
+    mainWindow.webContents.on('did-finish-load', () => {
+      try { mainWindow?.webContents.closeDevTools(); } catch (e) { /* ignore */ }
+    });
+    mainWindow.webContents.on('devtools-opened', () => {
+      try { setTimeout(() => mainWindow?.webContents.closeDevTools(), 50); } catch (e) { /* ignore */ }
+    });
+  } catch (e) { /* ignore */ }
+
+  // Forward maximize/unmaximize events to renderer so UI can reflect state
+  mainWindow.on('maximize', () => { mainWindow?.webContents.send('window:maximized'); });
+  mainWindow.on('unmaximize', () => { mainWindow?.webContents.send('window:unmaximized'); });
 }
+
+
 
 app.on('ready', () => {
   db = new DatabaseManager();
@@ -56,6 +98,21 @@ app.on('ready', () => {
   sshClient = new SSHClient();
   createWindow();
   createMenu();
+
+  // After startup give a short delay and close any stray DevTools windows
+  setTimeout(() => {
+    try {
+      BrowserWindow.getAllWindows().forEach((w) => {
+        try {
+          const url = w.webContents.getURL?.() ?? '';
+          const title = w.getTitle?.() ?? '';
+          if ((typeof url === 'string' && url.startsWith('devtools://')) || title.toLowerCase().includes('devtools') || title.toLowerCase().includes('developer')) {
+            try { w.close(); } catch (e) { /* ignore */ }
+          }
+        } catch (e) { /* ignore */ }
+      });
+    } catch (e) { /* ignore */ }
+  }, 500);
 });
 
 app.on('window-all-closed', () => {
@@ -307,6 +364,29 @@ ipcMain.handle('audit:clear', (_event, profileId?: string) => {
   db.clearAuditLog(profileId);
 });
 
+// Window control handlers for custom titlebar buttons
+ipcMain.handle('window:minimize', () => {
+  mainWindow?.minimize();
+});
+ipcMain.handle('window:maximize', () => {
+  if (!mainWindow) return;
+  if (!mainWindow.isMaximized()) mainWindow.maximize();
+});
+ipcMain.handle('window:unmaximize', () => {
+  mainWindow?.unmaximize();
+});
+ipcMain.handle('window:isMaximized', () => {
+  return mainWindow?.isMaximized() ?? false;
+});
+
+ipcMain.handle('window:isFrameless', () => {
+  // stored on the BrowserWindow instance when created
+  return Boolean(mainWindow && (mainWindow as any).isFrameless);
+});
+ipcMain.handle('window:close', () => {
+  mainWindow?.close();
+});
+
 // ── Menu ──────────────────────────────────────────────────────────────────────
 
 function createMenu() {
@@ -332,7 +412,6 @@ function createMenu() {
       label: 'View',
       submenu: [
         { label: 'Reload', accelerator: 'CmdOrCtrl+R', role: 'reload' },
-        { label: 'Toggle DevTools', accelerator: 'Alt+CmdOrCtrl+I', role: 'toggleDevTools' },
       ],
     },
   ];

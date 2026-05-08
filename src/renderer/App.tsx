@@ -50,6 +50,15 @@ declare global {
       removeSshConnectedListener: () => void;
       removeSshDisconnectedListener: () => void;
       removeSshErrorListener: () => void;
+      // Window controls
+      minimize: () => Promise<void>;
+      maximize: () => Promise<void>;
+      unmaximize: () => Promise<void>;
+      closeWindow: () => Promise<void>;
+      isWindowMaximized: () => Promise<boolean>;
+      onWindowMaximized: (cb: () => void) => void;
+      onWindowUnmaximized: (cb: () => void) => void;
+
       platform: string;
     };
   }
@@ -59,6 +68,7 @@ export default function App() {
   const [isConnected, setIsConnected] = useState(false);
   const [currentProfile, setCurrentProfile] = useState<SSHProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isMaximized, setIsMaximized] = useState(false);
 
   useEffect(() => {
     window.ipc?.sshIsConnected().then(setIsConnected).catch(() => {});
@@ -67,10 +77,20 @@ export default function App() {
     window.ipc?.onSshDisconnected(() => { setIsConnected(false); setCurrentProfile(null); });
     window.ipc?.onSshError(setError);
 
+    // Window events
+    if (typeof window.ipc?.isWindowMaximized === 'function') {
+      window.ipc.isWindowMaximized().then(setIsMaximized).catch(() => {});
+    } else {
+      setIsMaximized(false);
+    }
+    window.ipc?.onWindowMaximized?.(() => setIsMaximized(true));
+    window.ipc?.onWindowUnmaximized?.(() => setIsMaximized(false));
+
     return () => {
       window.ipc?.removeSshConnectedListener();
       window.ipc?.removeSshDisconnectedListener();
       window.ipc?.removeSshErrorListener();
+      // No remove listeners for window events (rarely needed) - fine for now
     };
   }, []);
 
@@ -78,58 +98,70 @@ export default function App() {
     await window.ipc?.sshDisconnect();
   };
 
+  const handleMinimize = () => { window.ipc?.minimize(); };
+  const handleMaximizeRestore = async () => {
+    const maximized = await window.ipc?.isWindowMaximized();
+    if (maximized) window.ipc?.unmaximize();
+    else window.ipc?.maximize();
+  };
+  const handleClose = () => { window.ipc?.closeWindow(); };
+
   const isMac = window.ipc?.platform === 'darwin';
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#1f2228', userSelect: 'none' }}>
       {/* Header */}
-      <div style={{ 
-        borderBottom: '1px solid rgba(255,255,255,0.1)', 
-        padding: isMac ? '0 24px 0 80px' : '0 24px', 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        height: 52, 
-        flexShrink: 0, 
-        WebkitAppRegion: isMac ? 'drag' : 'none' as any 
+      <div style={{
+        borderBottom: '1px solid rgba(255,255,255,0.1)',
+        padding: isMac ? '0 24px 0 120px' : '0 24px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        height: 52,
+        flexShrink: 0,
+        WebkitAppRegion: 'none' as any,
       }}>
-        <span style={{ fontFamily: 'Geist Mono, monospace', fontSize: '13px', fontWeight: 400, color: '#ffffff', textTransform: 'uppercase', letterSpacing: '2px' }}>
+        <span style={{ fontFamily: 'Geist Mono, monospace', fontSize: '13px', fontWeight: 400, color: '#ffffff', textTransform: 'uppercase', letterSpacing: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1, minWidth: 0 }}>
           ProCurve Manager
         </span>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, WebkitAppRegion: 'no-drag' as any, minWidth: 0 }}>
-          {isConnected && currentProfile && (
-            <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px', fontFamily: 'Geist Mono, monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1, minWidth: 0 }}>
-              {currentProfile.username}@{currentProfile.host}:{currentProfile.port}
-            </span>
-          )}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: isConnected ? '#10b981' : '#6b7280' }} />
-            <span style={{ color: isConnected ? '#10b981' : '#6b7280', fontSize: '11px', fontFamily: 'Geist Mono, monospace', textTransform: 'uppercase', letterSpacing: '0.8px', whiteSpace: 'nowrap' }}>
-              {isConnected ? 'Connected' : 'Disconnected'}
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flexGrow: 1 }}>
+            {isConnected && currentProfile && (
+              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px', fontFamily: 'Geist Mono, monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1, minWidth: 0 }}>
+                {currentProfile.username}@{currentProfile.host}:{currentProfile.port}
+              </span>
+            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: isConnected ? '#10b981' : '#6b7280' }} />
+              <span style={{ color: isConnected ? '#10b981' : '#6b7280', fontSize: '11px', fontFamily: 'Geist Mono, monospace', textTransform: 'uppercase', letterSpacing: '0.8px', whiteSpace: 'nowrap' }}>
+                {isConnected ? 'Connected' : 'Disconnected'}
+              </span>
+            </div>
+            {isConnected && (
+              <button
+                onClick={handleDisconnect}
+                style={{
+                  padding: '4px 12px',
+                  backgroundColor: 'transparent',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  color: 'rgba(255,255,255,0.5)',
+                  fontFamily: 'Geist Mono, monospace',
+                  fontSize: '10px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.8px',
+                  cursor: 'pointer',
+                  borderRadius: 0,
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                }}
+              >
+                Disconnect
+              </button>
+            )}
           </div>
-          {isConnected && (
-            <button
-              onClick={handleDisconnect}
-              style={{
-                padding: '4px 12px',
-                backgroundColor: 'transparent',
-                border: '1px solid rgba(255,255,255,0.15)',
-                color: 'rgba(255,255,255,0.5)',
-                fontFamily: 'Geist Mono, monospace',
-                fontSize: '10px',
-                textTransform: 'uppercase',
-                letterSpacing: '0.8px',
-                cursor: 'pointer',
-                borderRadius: 0,
-                whiteSpace: 'nowrap',
-                flexShrink: 0,
-              }}
-            >
-              Disconnect
-            </button>
-          )}
+
+          {/* native window controls are used, so hide custom buttons */}
         </div>
       </div>
 
