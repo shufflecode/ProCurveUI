@@ -86,6 +86,35 @@
 
 ---
 
+## 🐳 Docker (Small Build Container)
+
+This repository can be built inside a compact Docker image for reproducible CI/local builds.
+
+Important: the Electron desktop UI itself is not intended to run inside this container.
+Use Docker here as a build environment that produces the `dist/` artifacts.
+
+### Build the Docker image
+
+```bash
+docker build -t procurve-builder .
+```
+
+### Run build inside the container and write output to your local project
+
+```bash
+docker run --rm -v "${PWD}:/app" -w /app procurve-builder npm run build
+```
+
+### Linux package build in container (optional)
+
+```bash
+docker run --rm -v "${PWD}:/app" -w /app procurve-builder npm run package:linux
+```
+
+For Windows or macOS installers, build on the matching host OS.
+
+---
+
 ## 🛠️ Technical Architecture
 
 - **Core:** Electron (Main Process) + React (Renderer)
