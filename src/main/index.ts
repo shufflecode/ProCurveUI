@@ -220,6 +220,20 @@ ipcMain.handle('switch:getPorts', async () => {
   if (!sshClient) throw new Error('SSH not connected');
   const output = await sshClient.execute('show interfaces brief');
   const ports = ProCurveParser.parsePorts(output);
+
+  // `show interfaces brief` does not include saved port names on ProCurve,
+  // so enrich with `name` values from running-config.
+  try {
+    const runningConfig = await sshClient.execute('show running-config');
+    const portNames = ProCurveParser.parsePortNamesFromRunningConfig(runningConfig);
+    ports.forEach((port) => {
+      const name = portNames.get(port.id);
+      if (name) port.description = name;
+    });
+  } catch (e) {
+    // Keep base port list usable if running-config retrieval fails.
+  }
+
   if (currentProfile) db?.addAuditEntry(currentProfile.id, 'show interfaces brief', `${ports.length} ports`, true);
   return ports;
 });

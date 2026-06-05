@@ -2,6 +2,37 @@ import type { SystemInfo, Vlan, Port } from '../../types/ipc.js';
 
 export class ProCurveParser {
 
+  static parsePortNamesFromRunningConfig(output: string): Map<string, string> {
+    const names = new Map<string, string>();
+    const lines = output.split('\n');
+    let currentPort: string | null = null;
+
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+
+      const interfaceMatch = line.match(/^interface\s+(\S+)/i);
+      if (interfaceMatch) {
+        currentPort = interfaceMatch[1];
+        continue;
+      }
+
+      // Leave current interface context when another section starts.
+      if (/^(vlan|trunk|router|snmp-server|ip\s+|aaa\s+|spanning-tree|timesync|ntp\s+)/i.test(line)) {
+        currentPort = null;
+        continue;
+      }
+
+      if (!currentPort) continue;
+
+      const nameMatch = line.match(/^name\s+"?(.+?)"?$/i);
+      if (nameMatch) {
+        names.set(currentPort, nameMatch[1].trim());
+      }
+    }
+
+    return names;
+  }
+
   static parseSystemInfo(output: string): SystemInfo {
     const lines = output.split('\n');
     const info: Partial<SystemInfo> = {
