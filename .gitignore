@@ -8,3 +8,4 @@ release
 .vscode
 .idea
 procurve-manager.db
+package-lock.json

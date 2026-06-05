@@ -47,6 +47,37 @@ interface Props {
 
 type View = 'connect' | 'new' | 'manage' | 'edit';
 
+function Card({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      width: '100%',
+      maxWidth: 440,
+      padding: '40px',
+      border: '1px solid rgba(255,255,255,0.1)',
+      backgroundColor: 'rgba(255,255,255,0.02)',
+    }}>
+      {children}
+    </div>
+  );
+}
+
+function Title({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 style={{ fontFamily: 'Geist Mono, monospace', fontSize: '22px', fontWeight: 300, color: '#ffffff', textTransform: 'uppercase', letterSpacing: '1.4px', marginTop: 0, marginBottom: 32 }}>
+      {children}
+    </h2>
+  );
+}
+
+function ErrorBox({ error }: { error: string | null }) {
+  if (!error) return null;
+  return (
+    <div style={{ marginBottom: 20, padding: '10px 14px', backgroundColor: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#fca5a5', fontSize: '12px', borderRadius: 0 }}>
+      {error}
+    </div>
+  );
+}
+
 export default function ConnectionManager({ onConnected }: Props) {
   const [view, setView] = useState<View>('connect');
   const [profiles, setProfiles] = useState<SSHProfile[]>([]);
@@ -180,36 +211,12 @@ export default function ConnectionManager({ onConnected }: Props) {
 
   const currentProfile = profiles.find(p => p.id === selectedId);
 
-  const Card = ({ children }: { children: React.ReactNode }) => (
-    <div style={{
-      width: '100%',
-      maxWidth: 440,
-      padding: '40px',
-      border: '1px solid rgba(255,255,255,0.1)',
-      backgroundColor: 'rgba(255,255,255,0.02)',
-    }}>
-      {children}
-    </div>
-  );
-
-  const Title = ({ children }: { children: React.ReactNode }) => (
-    <h2 style={{ fontFamily: 'Geist Mono, monospace', fontSize: '22px', fontWeight: 300, color: '#ffffff', textTransform: 'uppercase', letterSpacing: '1.4px', marginTop: 0, marginBottom: 32 }}>
-      {children}
-    </h2>
-  );
-
-  const ErrorBox = () => error ? (
-    <div style={{ marginBottom: 20, padding: '10px 14px', backgroundColor: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#fca5a5', fontSize: '12px', borderRadius: 0 }}>
-      {error}
-    </div>
-  ) : null;
-
   return (
     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px', backgroundColor: '#1f2228' }}>
       {view === 'connect' && (
         <Card>
           <Title>Connect</Title>
-          <ErrorBox />
+          <ErrorBox error={error} />
 
           {profiles.length === 0 ? (
             <div style={{ marginBottom: 24, padding: '16px', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.4)', fontSize: '13px', textAlign: 'center' }}>
@@ -276,7 +283,7 @@ export default function ConnectionManager({ onConnected }: Props) {
       {view === 'new' && (
         <Card>
           <Title>New Profile</Title>
-          <ErrorBox />
+          <ErrorBox error={error} />
 
           <div style={S.formGroup()}>
             <label style={S.label()}>Profile Name</label>
@@ -345,7 +352,7 @@ export default function ConnectionManager({ onConnected }: Props) {
       {view === 'manage' && (
         <Card>
           <Title>Profiles</Title>
-          <ErrorBox />
+          <ErrorBox error={error} />
 
           <div style={{ marginBottom: 20 }}>
             {profiles.map(p => (
@@ -384,7 +391,7 @@ export default function ConnectionManager({ onConnected }: Props) {
       {view === 'edit' && (
         <Card>
           <Title>Edit Profile</Title>
-          <ErrorBox />
+          <ErrorBox error={error} />
 
           {profiles.find(p => p.id === editId) && (
             <>
