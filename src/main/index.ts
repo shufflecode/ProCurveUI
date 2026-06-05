@@ -11,7 +11,9 @@ try {
         try {
           const url = contents.getURL?.() ?? '';
           if (typeof url === 'string' && url.startsWith('devtools://')) {
-            try { contents.destroy(); } catch (e) { /* ignore */ }
+            // DevTools pages are hosted in their own BrowserWindow; close that window safely.
+            const devtoolsWindow = BrowserWindow.fromWebContents(contents);
+            try { devtoolsWindow?.close(); } catch (e) { /* ignore */ }
           }
         } catch (e) { /* ignore */ }
       });
